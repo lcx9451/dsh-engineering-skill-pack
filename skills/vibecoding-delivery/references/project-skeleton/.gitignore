@@ -1,0 +1,38 @@
+# 依赖与构建产物
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+*.tsbuildinfo
+
+# 环境与密钥（绝不入库）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+
+# 本地与编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.log
+tmp/
+.cache/
+
+# 测试与报告
+test-results/
+playwright-report/
+lighthouse-report/
+sbom/
+
+# IaC 本地状态（含明文敏感信息）
+*.tfstate
+*.tfstate.*
+.terraform/

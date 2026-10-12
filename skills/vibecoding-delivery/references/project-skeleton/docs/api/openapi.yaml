@@ -1,0 +1,195 @@
+openapi: 3.1.0
+info:
+  title: <项目名称> API
+  version: 0.1.0
+  description: |
+    本文件是接口的唯一源（SSOT）。
+    流程：先改本契约 → 通过 spectral lint → 生成/校验实现 → 跑契约测试。
+    破坏性变更必须先写 ADR 并给出废弃期。
+servers:
+  - url: http://localhost:3000
+    description: local
+  - url: https://<staging-host>
+    description: staging
+tags:
+  - name: system
+    description: 健康与元信息
+  - name: resumes
+    description: 简历处理
+
+paths:
+  /healthz:
+    get:
+      tags: [system]
+      summary: 存活探针
+      operationId: getHealthz
+      responses:
+        '200':
+          description: 服务存活
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+                  version:
+                    type: string
+
+  /resumes:
+    post:
+      tags: [resumes]
+      summary: 提交一份简历进行解析
+      operationId: createResume
+      description: |
+        幂等：以文件内容 SHA256 作为幂等键，重复提交返回首次结果且不重复计费。
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF / DOCX / 图片，单文件 ≤ 20MB
+      responses:
+        '202':
+          description: 已受理，异步解析中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resume'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 同一幂等键正在处理中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 文件超过 20MB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /resumes/{resumeId}:
+    get:
+      tags: [resumes]
+      summary: 查询解析结果
+      operationId: getResume
+      parameters:
+        - name: resumeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resume'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 客户端生成的幂等键；服务端亦以内容哈希兜底
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+  schemas:
+    Resume:
+      type: object
+      required: [id, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, succeeded, failed]
+        errorCode:
+          type: [string, "null"]
+          description: status=failed 时返回，取值见 docs 错误码字典
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC ISO-8601
+    Error:
+      type: object
+      required: [code, message, traceId]
+      properties:
+        code:
+          type: string
+          description: 稳定错误码，如 E_UNSUPPORTED_FORMAT
+        message:
+          type: string
+          description: 面向使用者的可读说明，不含内部堆栈与 PII
+        traceId:
+          type: string
+          description: 用于日志检索的链路 ID
+        details:
+          type: object
+          additionalProperties: true
+          description: 字段级错误明细（校验失败时）
+  responses:
+    BadRequest:
+      description: 参数校验失败
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: 未认证
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: 已认证但无权访问该资源
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: 触发限流
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: 建议重试等待秒数
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

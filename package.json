@@ -1,0 +1,48 @@
+{
+  "name": "dsh-engineering-skill-pack",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 技能包：28 个工程 / 技术栈 / 界面设计 / 写作技能，装一次即注册进 skills 目录。含 2 个自建技能（vibecoding-delivery、github-workflow）与 26 个 MIT/Apache-2.0 上游技能的署名打包。",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "skills",
+    "licenses",
+    "README.md",
+    "THIRD-PARTY-NOTICES.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-skill",
+    "skills",
+    "skill-pack",
+    "engineering",
+    "workflow"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lcx9451/dsh-engineering-skill-pack.git"
+  },
+  "homepage": "https://github.com/lcx9451/dsh-engineering-skill-pack#readme",
+  "bugs": "https://github.com/lcx9451/dsh-engineering-skill-pack/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

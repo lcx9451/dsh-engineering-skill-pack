@@ -1,0 +1,184 @@
+name: CI
+
+# 门禁分级（对应 docs/CONSTRAINTS.md）：
+#   fast  -> 类型 / lint / 格式 / 密钥        预算 <5s
+#   task  -> fast + 单元与集成测试 + 变更行覆盖率
+#   full  -> task + 契约 / SAST / SCA / 架构边界 / 构建体积
+# 目标：任何一项红都必须阻止合并。
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 最小权限：CI 只需要读代码
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------- 快速检查：几秒内出结果，让人愿意在本地也跑 ----------
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 类型检查
+        run: pnpm exec tsc --noEmit
+      - name: Lint
+        run: pnpm exec eslint .
+      - name: 格式
+        run: pnpm exec prettier --check .
+      - name: 密钥扫描（必须 --redact，避免命中值进入日志）
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --redact --no-banner --verbose
+
+  # ---------- 测试：含"变更行覆盖率"，不用整体覆盖率背锅 ----------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # diff-cover 需要目标分支历史
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 单元 + 集成测试与覆盖率
+        run: pnpm exec vitest run --coverage
+      - name: 变更行覆盖率 ≥ 80%
+        if: github.event_name == 'pull_request'
+        run: |
+          pipx install diff-cover
+          diff-cover coverage/lcov.info \
+            --compare-branch=origin/${{ github.base_ref }} \
+            --fail-under=80
+      - name: 上传覆盖率报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+  # ---------- 安全：SAST / SCA ----------
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 代码安全（Semgrep：OWASP Top 10 + 默认规则）
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:latest \
+            semgrep scan --config p/default --config p/owasp-top-ten --error
+      - name: 依赖安全（osv-scanner：high 及以上即失败）
+        run: |
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2 \
+            scan source -r /src
+
+  # ---------- 架构边界：防止 AI 顺手跨层调用 ----------
+  architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 依赖方向检查
+        run: pnpm exec depcruise --validate src
+      - name: 接口契约 lint
+        run: pnpm exec spectral lint docs/api/openapi.yaml
+
+  # ---------- 构建与体积预算 ----------
+  build:
+    runs-on: ubuntu-latest
+    needs: [fast]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: 包体积预算
+        run: pnpm exec size-limit --json
+      - name: 生成 SBOM 并归档
+        run: |
+          docker run --rm -v "$PWD:/src" anchore/syft:latest \
+            dir:/src -o cyclonedx-json=/src/sbom/sbom.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+
+  # ---------- 动态检查：需要可访问的预览环境 ----------
+  # Web 项目启用：部署预览 -> Lighthouse（LCP/CLS）-> axe（无障碍）
+  # 无 URL 的项目（CLI / 库 / 桌面端）删除本 job，并在此处改用该栈的外部检查，
+  # 但必须保证 CONSTRAINTS.md 中"至少一条外部约束"仍然成立。
+  dynamic:
+    if: ${{ vars.PREVIEW_URL != '' }}
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lighthouse 性能预算
+        run: |
+          npx --yes lighthouse@12 "${{ vars.PREVIEW_URL }}" \
+            --output=json --output-path=lighthouse.json --quiet \
+            --chrome-flags="--headless --no-sandbox"
+      - name: 断言 LCP ≤ 2500ms 且 CLS ≤ 0.1
+        run: |
+          node -e "
+          const r = require('./lighthouse.json');
+          const lcp = r.audits['largest-contentful-paint'].numericValue;
+          const cls = r.audits['cumulative-layout-shift'].numericValue;
+          console.log('LCP', lcp, 'CLS', cls);
+          if (lcp > 2500) { console.error('LCP 超预算'); process.exit(1); }
+          if (cls > 0.1)  { console.error('CLS 超预算'); process.exit(1); }
+          "
+      - name: 无障碍（critical / serious 必须为 0）
+        run: |
+          npx --yes @axe-core/cli "${{ vars.PREVIEW_URL }}" \
+            --tags wcag2a,wcag2aa,wcag21aa --exit
+
+  # ---------- 单一必需检查：分支保护只勾这一个 ----------
+  gate:
+    if: always()
+    needs: [fast, test, security, architecture, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 汇总门禁结果
+        run: |
+          echo "fast=${{ needs.fast.result }}"
+          echo "test=${{ needs.test.result }}"
+          echo "security=${{ needs.security.result }}"
+          echo "architecture=${{ needs.architecture.result }}"
+          echo "build=${{ needs.build.result }}"
+          for r in "${{ needs.fast.result }}" "${{ needs.test.result }}" \
+                   "${{ needs.security.result }}" "${{ needs.architecture.result }}" \
+                   "${{ needs.build.result }}"; do
+            if [ "$r" != "success" ]; then
+              echo "::error::门禁未通过（$r）"
+              exit 1
+            fi
+          done
+          echo "全部门禁通过"
+
+# 上线前必做（供应链要求，见 docs/security.md 第四节）：
+#   1. 把 actions/* 与 docker 镜像 tag 固定为具体版本或 commit SHA
+#   2. 分支保护勾选 "gate" 为必需检查，并开启 CODEOWNERS 评审
+#   3. Gate 3 演练：故意制造类型错误 / 假密钥 / 高危依赖，确认三次都红

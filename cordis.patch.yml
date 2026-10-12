@@ -1,0 +1,13 @@
+# dsh-engineering-skill-pack
+#
+# 把随包携带的 skills/ 目录注册成一个 DSH 技能源（filesystem skill provider）。
+# 解析方式与官方技能包一致：从 DSH profile 的模块解析（Loader baseUrl）定位本包的
+# package.json，再取与它同级的 skills/ —— 不把路径拼在 baseUrl 上，因此 npm 安装、
+# GitHub 安装、release tarball 安装三种方式都成立。
+- insert:
+    - id: dsh-engineering-skill-pack-skills
+      name: '@deepseek-ai/dsh-skill-filesystem'
+      config:
+        providerName: dsh-engineering-skill-pack
+        includeDefaultRoots: false
+        bundledSkillDir: !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('dsh-engineering-skill-pack/package.json')), 'skills')
