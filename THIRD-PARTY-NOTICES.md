@@ -62,3 +62,6 @@ licenses/vercel-labs-skills.LICENSE               MIT
 | `vibecoding-delivery` | 本仓库作者 | MIT |
 | `github-workflow` | 本仓库作者 | MIT |
 | 打包结构、`cordis.patch.yml`、README 等 | 本仓库作者 | MIT（见 [`LICENSE`](LICENSE)） |
+
+> 仓库根的 `LICENSE` 是**纯 MIT 正文**，只覆盖本仓库自有部分（打包结构与上面两个自建技能）。
+> 它**不覆盖**任何第三方技能——第三方的许可以上表与 `licenses/` 里的原文为准。
