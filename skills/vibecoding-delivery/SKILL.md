@@ -39,8 +39,8 @@ description: 从零交付一个项目的完整流程（需求采集 → 可测 P
 
 ```powershell
 Copy-Item -Recurse -Force "<skill>\references\project-skeleton\*" "<项目根>"
-# 若目标是 npm / tarball 安装的副本：npm 打包会剥离 .gitignore 这个文件名，
-# 骨架里留了一份同内容副本 gitignore，用它补上：
+# 打包分发的副本会丢掉 .gitignore 这个文件名（npm 打包、Release tarball、乃至从
+# git 安装时的打包步骤都会剥离它），骨架里留了一份同内容副本 gitignore，用它补上：
 if (-not (Test-Path "<项目根>\.gitignore")) { Copy-Item "<skill>\references\project-skeleton\gitignore" "<项目根>\.gitignore" }
 ```
 
