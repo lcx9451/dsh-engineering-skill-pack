@@ -15,7 +15,10 @@
 # 方式一：npm（能一键升级，推荐）
 dsh plugin --profile <你的 profile> add dsh-engineering-skill-pack
 
-# 方式二：直接从 GitHub 安装（无需 npm）
+# 方式二：预构建 tarball（不走 npm，免构建授权）
+dsh plugin --profile <你的 profile> add "https://github.com/lcx9451/dsh-engineering-skill-pack/releases/download/v0.1.0/dsh-engineering-skill-pack-0.1.0.tgz"
+
+# 方式三：直接从 GitHub 源码安装
 dsh plugin --profile <你的 profile> add github:lcx9451/dsh-engineering-skill-pack
 ```
 
@@ -24,6 +27,8 @@ dsh plugin --profile <你的 profile> add github:lcx9451/dsh-engineering-skill-p
 **卸载**：`dsh plugin --profile <profile> remove dsh-engineering-skill-pack`
 
 > `--profile` 用你实际在用的那个（桌面版通常是 `desktop`，Web 版通常是 `web`）。
+>
+> 若方式二/三报 `allowBuilds` 相关的错，按提示把 pnpm 打印的那个键加进 profile 的 `pnpm-workspace.yaml` 再重跑即可（这是 pnpm 对 git 来源依赖的构建授权，不是包本身的问题）；也可以直接改用方式一。
 
 ## 装完你会得到什么
 

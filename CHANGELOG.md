@@ -19,4 +19,15 @@
 **已知事项**
 
 - `vercel-labs/agent-skills` 上游没有仓库级 LICENSE 文件，`vercel-react-best-practices` 的许可依据是该技能自身的 `license: MIT` 元数据声明，详见 `THIRD-PARTY-NOTICES.md`。
-- 尚未发布到 npm（0.1.0 先走 GitHub 安装：`dsh plugin add github:lcx9451/dsh-engineering-skill-pack`）。
+
+**已验证的安装路径**
+
+三条都在干净的临时 `DSH_HOME` + 独立 profile 上实测过，装完均为 28 个技能目录、补丁层正常进入 profile 组合：
+
+- `dsh plugin add github:lcx9451/dsh-engineering-skill-pack`
+- `dsh plugin add "https://github.com/lcx9451/dsh-engineering-skill-pack/releases/download/v0.1.0/dsh-engineering-skill-pack-0.1.0.tgz"`（v0.1.0 Release 资产）
+- npm（见下）
+
+**待办**
+
+- npm 首发（`dsh-engineering-skill-pack@0.1.0` 已 `npm pack` 验证：343 个文件、28 个 SKILL.md、9 份许可证、1.4 MB tarball）。
