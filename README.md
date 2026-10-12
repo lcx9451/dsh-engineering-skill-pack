@@ -16,7 +16,7 @@
 dsh plugin --profile <你的 profile> add dsh-engineering-skill-pack
 
 # 方式二：预构建 tarball（不走 npm，免构建授权）
-dsh plugin --profile <你的 profile> add "https://github.com/lcx9451/dsh-engineering-skill-pack/releases/download/v0.1.0/dsh-engineering-skill-pack-0.1.0.tgz"
+dsh plugin --profile <你的 profile> add "https://github.com/lcx9451/dsh-engineering-skill-pack/releases/download/v0.1.1/dsh-engineering-skill-pack-0.1.1.tgz"
 
 # 方式三：直接从 GitHub 源码安装
 dsh plugin --profile <你的 profile> add github:lcx9451/dsh-engineering-skill-pack

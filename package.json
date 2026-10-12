@@ -1,6 +1,6 @@
 {
   "name": "dsh-engineering-skill-pack",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DeepSeek Harness 技能包：28 个工程 / 技术栈 / 界面设计 / 写作技能，装一次即注册进 skills 目录。含 2 个自建技能（vibecoding-delivery、github-workflow）与 26 个 MIT/Apache-2.0 上游技能的署名打包。",
   "license": "MIT",
   "type": "module",

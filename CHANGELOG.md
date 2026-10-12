@@ -2,6 +2,16 @@
 
 本文件记录 `dsh-engineering-skill-pack` 的变更。版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.1.1] - 2026-10-13
+
+**修复**
+
+- **npm / tarball 安装缺少骨架的 `.gitignore`**。npm 打包时会剥离 `.gitignore` 这个文件名（已实测：tarball 里 `.gitignore` 条目数为 0，而 `.env.example`、`.dependency-cruiser.cjs` 正常保留），于是通过 npm 或预构建 tarball 安装的用户拿到的项目骨架少一个文件。现在 `vibecoding-delivery/references/project-skeleton/` 里同时保留：
+  - `.gitignore`（git 源码安装会拿到它）
+  - `gitignore`（同内容副本，npm 不会剥离它）
+  并在该技能的「脚手架」步骤里给出补齐命令：若 `.gitignore` 不存在就用副本改名补上。
+- 影响面说明：`0.1.0` **从未发布到 npm**，`v0.1.0` 的 Release 资产按原样保留但请改用 `v0.1.1`。
+
 ## [0.1.0] - 2026-10-12
 
 首个版本：把 28 个技能打包为一个可安装的 DSH 技能包。
@@ -25,9 +35,9 @@
 三条都在干净的临时 `DSH_HOME` + 独立 profile 上实测过，装完均为 28 个技能目录、补丁层正常进入 profile 组合：
 
 - `dsh plugin add github:lcx9451/dsh-engineering-skill-pack`
-- `dsh plugin add "https://github.com/lcx9451/dsh-engineering-skill-pack/releases/download/v0.1.0/dsh-engineering-skill-pack-0.1.0.tgz"`（v0.1.0 Release 资产）
-- npm（见下）
+- `dsh plugin add "<…>/releases/download/v0.1.0/dsh-engineering-skill-pack-0.1.0.tgz"`（v0.1.0 Release 资产；**已被 0.1.1 取代**，见上）
+- npm
 
-**待办**
+**已知事项（已在 0.1.1 修复）**
 
-- npm 首发（`dsh-engineering-skill-pack@0.1.0` 已 `npm pack` 验证：343 个文件、28 个 SKILL.md、9 份许可证、1.4 MB tarball）。
+- npm / tarball 安装缺骨架 `.gitignore`，详见 0.1.1。
